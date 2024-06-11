@@ -25,11 +25,11 @@ def timeit(function: Callable) -> Callable:
     @wraps(function)
     def wrapper(*args, **kwargs) -> Any:
         start_time = time.perf_counter()
-        function(*args, **kwargs)
+        output = function(*args, **kwargs)
         end_time = time.perf_counter()
         total_time = end_time - start_time
         print(f"Function `{function.__name__}` took {total_time:.4f} seconds")
-        return total_time
+        return output
 
     return wrapper
 
@@ -37,17 +37,17 @@ def timeit(function: Callable) -> Callable:
 def is_vessel_within_circle_pairwise(
         latitudes: NDArray,
         longitudes: NDArray,
-        center: Tuple[float, float],
-        radius: float
+        center: Tuple[float, float] = (55.225000, 14.245000),
+        radius_km: float = 50
 ) -> NDArray:
     center_latitude, center_longitude = center
     delta_latitudes = np.radians(latitudes - center_latitude)
     delta_longitudes = np.radians(longitudes - center_longitude)
-    a = (
+    x = (
             np.sin(delta_latitudes / 2) ** 2 +
             np.cos(np.radians(center_latitude)) * np.cos(np.radians(latitudes)) * np.sin(delta_longitudes / 2) ** 2
     )
-    return (6371 * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))) <= radius
+    return (6371 * 2 * np.arctan2(np.sqrt(x), np.sqrt(1 - x))) <= radius_km
 
 
 def plot_vessel_trajectories(df: pd.DataFrame, closest_pair: ClosestPair) -> None:
@@ -86,11 +86,11 @@ def plot_vessel_trajectories(df: pd.DataFrame, closest_pair: ClosestPair) -> Non
 
     plt.figure(figsize=(10, 6))
 
-    plt.plot(vessel1_data["Longitude"], vessel1_data["Latitude"], label=f"Vessel {closest_pair.mmsi1}")
-    plt.plot(vessel2_data["Longitude"], vessel2_data["Latitude"], label=f"Vessel {closest_pair.mmsi2}")
+    plt.plot(vessel1_data["Longitude"], vessel1_data["Latitude"], label=f"Vessel {closest_pair.mmsi1}", c="red")
+    plt.plot(vessel2_data["Longitude"], vessel2_data["Latitude"], label=f"Vessel {closest_pair.mmsi2}", c="blue")
 
-    plt.scatter(vessel1_data["Longitude"], vessel1_data["Latitude"], c="blue", s=10)
-    plt.scatter(vessel2_data["Longitude"], vessel2_data["Latitude"], c="red", s=10)
+    plt.scatter(vessel1_data["Longitude"], vessel1_data["Latitude"], c="red", s=10)
+    plt.scatter(vessel2_data["Longitude"], vessel2_data["Latitude"], c="blue", s=10)
 
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
