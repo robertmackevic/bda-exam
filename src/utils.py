@@ -6,6 +6,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+from folium import Map, PolyLine, CircleMarker
 from matplotlib import pyplot as plt
 from numpy.typing import NDArray
 
@@ -63,6 +64,25 @@ def plot_vessel_trajectories(df: pd.DataFrame, closest_pair: ClosestPair) -> Non
         (df["Timestamp"] >= start_time) &
         (df["Timestamp"] <= end_time)
         ]
+
+    # Create a map centered around the average coordinates of the vessels
+    mean_latitude = (vessel1_data["Latitude"].mean() + vessel2_data["Latitude"].mean()) / 2
+    mean_longitude = (vessel1_data["Longitude"].mean() + vessel2_data["Longitude"].mean()) / 2
+    folium_map = Map(location=[mean_latitude, mean_longitude], zoom_start=15)
+
+    # Add vessel 1 trajectory
+    vessel1_coords = list(zip(vessel1_data["Latitude"], vessel1_data["Longitude"]))
+    PolyLine(vessel1_coords, color="red", weight=2.5, opacity=1, tooltip=f"{closest_pair.mmsi1}").add_to(folium_map)
+    for coord in vessel1_coords:
+        CircleMarker(location=coord, radius=3, color="red").add_to(folium_map)
+
+    # Add vessel 2 trajectory
+    vessel2_coords = list(zip(vessel2_data["Latitude"], vessel2_data["Longitude"]))
+    PolyLine(vessel2_coords, color="blue", weight=2.5, opacity=1, tooltip=f"{closest_pair.mmsi2}").add_to(folium_map)
+    for coord in vessel2_coords:
+        CircleMarker(location=coord, radius=3, color="blue").add_to(folium_map)
+
+    folium_map.save(DATA_DIR / (closest_pair.timestamp.date().isoformat() + ".html"))
 
     plt.figure(figsize=(10, 6))
 
