@@ -38,12 +38,8 @@ Timestamp: 2021-12-13 10:43:00
 * Blue and red markers indicate the concrete positions at given timestamps.
 * Black markers indicate the approximate rendezvous point (closest position between 2 vessels)
 
-<p style="text-align: center;">
-  <img src="data/report/results-1.png" alt="Image">
-</p>
-<p style="text-align: center;">
-  <img src="data/report/results-2.png" alt="Image">
-</p>
+![Image](data/report/results-1.png)
+![Image](data/report/results-2.png)
 
 ## Findings
 
@@ -78,9 +74,7 @@ Distance: 9.071 meters
 Timestamp: 2021-12-13 02:27:25
 ```
 
-<p style="text-align: center;">
-  <img src="data/report/findings-1.png" alt="Image">
-</p>
+![Image](data/report/findings-1.png)
 
 The incident described in the article was initially not identified by the algorithm because on the same day,
 another pair of vessels had an even smaller recorded distance between them based on GPS data
@@ -94,6 +88,4 @@ Hardware:
 * GPU: RTX 3060
 * RAM: 32 GB
 
-<p style="text-align: center;">
-  <img src="data/report/findings-2.png" alt="Image">
-</p>
+![Image](data/report/findings-2.png)
