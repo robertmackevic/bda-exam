@@ -65,12 +65,15 @@ def _plot_trajectories_pyplot(
 ) -> None:
     plt.figure(figsize=(10, 6))
 
+    # Plot the trajectory of the first vessel
     plt.plot(vessel1_data["Longitude"], vessel1_data["Latitude"], label=f"{rendezvous.mmsi1}", c="red", zorder=1)
-    plt.plot(vessel2_data["Longitude"], vessel2_data["Latitude"], label=f"{rendezvous.mmsi2}", c="blue", zorder=1)
-
     plt.scatter(vessel1_data["Longitude"], vessel1_data["Latitude"], c="red", s=10, zorder=2)
+
+    # Plot the trajectory of the second vessel
+    plt.plot(vessel2_data["Longitude"], vessel2_data["Latitude"], label=f"{rendezvous.mmsi2}", c="blue", zorder=1)
     plt.scatter(vessel2_data["Longitude"], vessel2_data["Latitude"], c="blue", s=10, zorder=2)
 
+    # Plot black circle markers at the closest points
     plt.scatter(*rendezvous.coords1[::-1], c="black", s=50, label="Rendezvous", zorder=3)
     plt.scatter(*rendezvous.coords2[::-1], c="black", s=50, zorder=3)
 

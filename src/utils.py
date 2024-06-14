@@ -34,9 +34,10 @@ def timeit(function: Callable) -> Callable:
 def is_vessel_within_circle_pairwise(
         latitudes: NDArray,
         longitudes: NDArray,
-        center: Tuple[float, float] = (55.225000, 14.245000),
-        radius_km: float = 50
+        center: Tuple[float, float],
+        radius_km: float
 ) -> NDArray:
+    """ Checks if the vessels are within a given circle using Haversine distance formula """
     center_latitude, center_longitude = center
     delta_latitudes = np.radians(latitudes - center_latitude)
     delta_longitudes = np.radians(longitudes - center_longitude)

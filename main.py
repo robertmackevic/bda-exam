@@ -1,8 +1,19 @@
+"""
+Script to find the two closest moving vessels in a particular sea area and visualize their trajectory
+10 minutes before and after the rendezvous time.
+
+Args:
+    -w  --max-workers   (optional)  Number of parallel workers. (default: all available)
+    -f  --num-files     (optional)  Number of files to process. (default: all available)
+
+Note that by default all available workers will be used, which may lead to high memory consumption.
+It's best to adjust this parameter based on the hardware.
+"""
 from argparse import Namespace, ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from os import listdir
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -21,11 +32,20 @@ def parse_args() -> Namespace:
     return parser.parse_args()
 
 
-def find_rendezvous_moment(filepath: Path) -> Rendezvous:
+def find_rendezvous_moment(
+        filepath: Path,
+        window_size: int = 30,
+        step_size: int = 5,
+        center: Tuple[float, float] = (55.225000, 14.245000),
+        radius_km: float = 50
+) -> Rendezvous:
     df = pd.read_csv(filepath)
 
     df.rename(columns={"# Timestamp": "Timestamp"}, inplace=True)
+    # Only leave the columns which are needed for analysis
     df = df.filter(items=["Timestamp", "Latitude", "Longitude", "MMSI", "SOG"])
+    # Filter out entries with incorrect coordinate values
+    # Filter out entries which have a low or non-existing speed over ground (SOG)
     df = df[
         (df["Latitude"] >= -90) &
         (df["Latitude"] <= 90) &
@@ -33,35 +53,54 @@ def find_rendezvous_moment(filepath: Path) -> Rendezvous:
         (df["Longitude"] <= 90) &
         (df["SOG"] >= 1.0)
         ]
-    df = df[is_vessel_within_circle_pairwise(df["Latitude"].values, df["Longitude"].values)]
+    # Filter out vessels that are not in the circle
+    df = df[is_vessel_within_circle_pairwise(df["Latitude"].values, df["Longitude"].values, center, radius_km)]
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], format="%d/%m/%Y %H:%M:%S")
 
     rendezvous = Rendezvous()
+    start_time = df["Timestamp"].min()
+    end_time = df["Timestamp"].max()
+    current_time = start_time
 
-    for timestamp, group in df.groupby("Timestamp"):
-        if len(group) < 2:
+    # Go through the data with a sliding window technique
+    while current_time <= end_time:
+        # Group the vessels by time
+        window_end = current_time + pd.Timedelta(seconds=window_size)
+        window_df = df[(df["Timestamp"] >= current_time) & (df["Timestamp"] <= window_end)]
+
+        # If less than 2 vessels in a group, then skip the calculation
+        if len(window_df) < 2:
+            current_time += pd.Timedelta(seconds=step_size)
             continue
 
-        vessel_positions = np.radians(group[["Latitude", "Longitude"]].values)
-        vessel_mmsi = group["MMSI"].values
+        vessel_positions = np.radians(window_df[["Latitude", "Longitude"]].values)
+        vessel_mmsi = window_df["MMSI"].values
+        # Create a BallTree for efficient spatial queries using the Haversine metric
         tree = BallTree(vessel_positions, metric="haversine")
+
+        # Query the BallTree to find the distance and index of the closest neighbor for each vessel
+        # k=2 returns the distance and index of the two closest neighbors (including itself)
         distances, indices = tree.query(vessel_positions, k=2)
 
-        for i, (distance, j) in enumerate(zip(distances, indices)):
-            if vessel_mmsi[i] == vessel_mmsi[j[1]]:
+        for distance, index in zip(distances, indices):
+            # If it's the same vessel, but at a slightly different time step, then skip the calculation
+            if vessel_mmsi[index[0]] == vessel_mmsi[index[1]]:
                 continue
 
-            haversine_distance = distance[1] * 6371
+            # Convert distance to kilometers
+            distance = distance[1] * 6371
 
-            if haversine_distance < rendezvous.distance:
+            if distance < rendezvous.distance:
                 rendezvous = Rendezvous(
-                    mmsi1=vessel_mmsi[i],
-                    mmsi2=vessel_mmsi[j[1]],
-                    coords1=group[["Latitude", "Longitude"]].values[i],
-                    coords2=group[["Latitude", "Longitude"]].values[j[1]],
-                    distance=haversine_distance,
-                    timestamp=timestamp
+                    mmsi1=vessel_mmsi[index[0]],
+                    mmsi2=vessel_mmsi[index[1]],
+                    coords1=window_df[["Latitude", "Longitude"]].values[index[0]],
+                    coords2=window_df[["Latitude", "Longitude"]].values[index[1]],
+                    distance=distance,
+                    timestamp=current_time
                 )
+
+        current_time += pd.Timedelta(seconds=step_size)
 
     plot_vessel_trajectories(df, rendezvous)
     return rendezvous
